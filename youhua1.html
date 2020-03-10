@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style type="text/css">
+		* {
+			margin: 0;
+			padding: 0;
+		}
+		body {
+			background-color: #eee;
+		}
+		.container {
+			width: 1100px;
+			margin: 0 auto;
+		}
+		.container .content {
+			height: 625px;
+
+			background-color: white;
+		}
+		.container .content .title {
+			box-sizing: border-box;
+			padding-left: 33px;
+			height: 54px;
+			border-bottom: 1px solid #eee;
+			line-height: 54px;
+			font-size: 14px;
+			font-weight: 700;
+		}
+		.container .content .title span {
+			display: inline-block;
+		}
+		.container .content .list {
+			box-sizing: border-box;
+			
+		}
+		.container .content .list li {
+			padding-left: 33px;
+			line-height: 53px;
+			border-bottom: 1px dotted #eee;
+		}
+		.container .content .list li span {
+			display: inline-block;
+			font-size: 14px;
+		}
+		.container .content .job-name {
+			width: 300px;
+
+		}
+		.container .content .job-type {
+			width: 150px;
+		}
+		.container .content .work-place {
+			width: 150px;
+		}
+		.container .content .num {
+			width: 200px;
+		}
+		.container .content .publish-time {}
+		ul {
+			list-style: none;
+		}
+		.btns {
+			padding: 20px 0;
+			width: 100%;
+			background-color: #fff;
+			text-align: center;
+		}
+		button {
+			width: 200px;
+			height: 40px;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="content">
+			<div class="title">
+				<span class="job-name">职位名称</span>
+				<span class="job-type">职位类别</span> 
+				<span class="work-place">工作地点</span> 
+				<span class="num">招聘人数</span> 
+				<span class="publish-time">更新时间</span>
+			</div>
+			<ul id="list" class="list">
+				
+			</ul>
+		</div>
+		<div class="btns">
+			<button id="last">上一页</button>
+			<button id="next">下一页</button>
+		</div>
+	</div>
+	<script type="text/template" id="template">
+		<li>
+			<span class="job-name"><%name%></span>
+			<span class="job-type"><%type%></span>
+			<span class="work-place"><%workPlace%></span>
+			<span class="num"><%recruitNum%></span>
+			<span class="publish-time"><%publishDate%></span>
+		</li>
+	</script>
+	<script type="text/javascript" src="./jquery.js"></script>
+	<script type="text/javascript">
+		// 获取上下按钮
+		var last = document.getElementById("last");
+		var next = document.getElementById("next");
+		// 获取容器元素
+		var list = document.getElementById("list");
+		// 获取模板
+		var tpl = document.getElementById("template").innerHTML;
+// 请求分页的第一条数据
+function sendAjax(num) {
+	console.time();
+	// 在发送ajax之前，先检测本地是否拥有该数据 如果有就使用 如果没有再发送
+	var arr = JSON.parse(localStorage.getItem("data")) || [];
+	console.log(arr);
+	if (arr[num]) {
+		console.log("走的是本地存储")
+		list.innerHTML = "";
+		arr[num].postList.forEach(function(value) {
+			value.type = value.postType.slice(4, 6);
+			var result = format(tpl, value)
+			list.innerHTML += result;
+		})
+		console.timeEnd();
+		return;
+	}
+	console.log("走的是发送ajax")
+	$.ajax({
+		url: "/data/" + num + ".json",
+		dataType: "json",
+		success: function(data) {
+			// 存储到本地对象中
+			arr.push(data);
+			localStorage.setItem("data", JSON.stringify(arr));
+			// 请求成功之后 先将原页面内容清掉
+			list.innerHTML = "";
+			data.postList.forEach(function(value) {
+				value.type = value.postType.slice(4, 6);
+				var result = format(tpl, value)
+				list.innerHTML += result;
+			})
+			console.timeEnd();
+		}
+	});
+}
+		// 定义成信号量
+		var idx = 0;
+		// 自动调用一次
+		sendAjax(idx);
+	
+		// 绑定点击事件
+		next.onclick = function() {
+			// 当点击下一页的时候 此时并不是真的跳转页面  而是发送ajax 当ajax的请求内容回来之后，将当前页面清空，并重新渲染
+			idx++;
+			sendAjax(idx);
+		}
+		last.onclick = function() {
+			// 当点击下一页的时候 此时并不是真的跳转页面  而是发送ajax 当ajax的请求内容回来之后，将当前页面清空，并重新渲染
+			idx--;
+			if (idx < 0) {
+				idx = 0;
+				return;
+			}
+			sendAjax(idx);
+		}
+
+
+
+		// 定义格式化函数
+		function format(tpl, dic) {
+			// 返回一个被格式化之后的字符串
+			return tpl.replace(/<%(\w+(\.\w+)*)%>/g, function(match, $1) {
+				// 将$1以.分割
+				var pathArr = $1.split(".");
+				// 定义变量 引用dic 防止dic的地址发生变化
+				var result = dic;
+				// 开始循环每一层级 除了最后一层之外
+				for (var i = 0; i < pathArr.length - 1; i++) {
+					result = result[pathArr[i]];
+				}
+				return result[pathArr[i]];
+			})
+		}
+	</script>
+</body>
+</html>
